@@ -3330,7 +3330,7 @@ void stb__arr_deleten_(void **pp, int size, int i, int n  STB__PARAMS)
 STB_EXTERN unsigned int stb_hash(char *str);
 STB_EXTERN unsigned int stb_hashptr(void *p);
 STB_EXTERN unsigned int stb_hashlen(char *str, int len);
-STB_EXTERN unsigned int stb_rehash_improved(unsigned int v);
+STB_EXTERN unsigned int stb_rehash_improved(stb_uinta v);
 STB_EXTERN unsigned int stb_hash_fast(void *p, int len);
 STB_EXTERN unsigned int stb_hash2(char *str, unsigned int *hash2_ptr);
 STB_EXTERN unsigned int stb_hash_number(unsigned int hash);
@@ -3371,7 +3371,7 @@ unsigned int stb_hashptr(void *p)
    return stb_rehash(x);
 }
 
-unsigned int stb_rehash_improved(unsigned int v)
+unsigned int stb_rehash_improved(stb_uinta v)
 {
    return stb_hashptr((void *)(size_t) v);
 }
