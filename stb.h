@@ -2636,8 +2636,7 @@ void stb_malloc_validate(void *p, void *parent)
 static void * stb__try_chunk(stb__chunk *c, int size, int align, int pre_align)
 {
    char *memblock = (char *) (c+1), *q;
-   stb_inta iq;
-   int start_offset;
+   stb_inta  iq, start_offset;
 
    // we going to allocate at the end of the chunk, not the start. confusing,
    // but it means we don't need both a 'limit' and a 'cur', just a 'cur'.
