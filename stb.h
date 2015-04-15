@@ -979,6 +979,93 @@ char *stb__to_utf8(stb__wchar *str)
 
 //////////////////////////////////////////////////////////////////////////////
 //
+//                         Miscellaneous UTF-8 routines
+//
+
+// Read a single unicode character from utf-8 stream.
+STB_EXTERN stb_int32 stb_utf8_getc(FILE* fp);
+
+// Write unicode character to buf as utf-8. Returns 0-4 characters written.
+STB_EXTERN int stb_utf8_encode(unsigned char* buf, stb_int32 ch);
+
+#ifdef STB_DEFINE
+
+/*
+   Notes / limitations:
+   * Returns a unicode character or EOF
+   * Doesn't handle more than 4-byte sequences
+   * Calls ungetc up to 3 times in case of an error
+   * Valid utf-8 bytes:
+   0xxxxxxx
+   110xxxxx 10xxxxxx
+   1110xxxx 10xxxxxx 10xxxxxx
+   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+ */
+stb_int32 stb_utf8_getc(FILE* fp)
+{
+   stb_int32 c[4];
+   c[0] = getc(fp);
+   if (c[0] < 0x80) return c[0];
+   if (c[0] < 0xC2) goto error;
+   c[1] = getc(fp);
+   if (c[1] < 0) return c[1];
+   if ((c[1] & 0xc0) != 0x80) goto error1;
+   if (c[0] < 0xe0) {
+      return (c[0] << 6) + c[1] - 0x3080;
+   } else if (c[0] < 0xf0) {
+      if (c[0] == 0xe0 && c[1] < 0xa0) goto error1; // overlong
+      c[2] = getc(fp);
+      if (c[2] < 0) return c[2];
+      if ((c[2] & 0xc0) != 0x80) goto error2;
+      return (c[0] << 12) + (c[1] << 6) + c[2] - 0xe2080;
+   } else if (c[0] < 0xf5) {
+      if (c[0] == 0xf0 && c[1] < 0x90) goto error1; // overlong
+      if (c[0] == 0xf4 && c[1] >= 0x90) goto error1; // > U+10ffff
+      c[2] = getc(fp);
+      if (c[2] < 0) return c[2];
+      if ((c[2] & 0xc0) != 0x80) goto error2;
+      c[3] = getc(fp);
+      if (c[3] < 0) return c[3];
+      if ((c[2] & 0xc0) != 0x80) goto error3;
+      return (c[0] << 18) + (c[1] << 12) + (c[2] << 6) + c[3] - 0x3c82080;
+   }
+   goto error; // > U+10ffff
+error3: ungetc(c[3], fp);
+error2: ungetc(c[2], fp);
+error1: ungetc(c[1], fp);
+error: return -1;
+}
+
+int stb_utf8_encode(unsigned char* buf, stb_int32 ch)
+{
+   if ((ch >= 0xd800 && ch <= 0xdfff) || ch < 0 || ch > 0x10ffff)
+      return 0;
+   if (ch < 0x80) {
+      buf[0] = (unsigned char)ch;
+      return 1;
+   }
+   if (ch < 0x800) {
+      buf[0] = 0xc0 | (((unsigned char)ch >> 6));
+      buf[1] = 0x80 | (((unsigned char)ch) & 0x3f);
+      return 2;
+   }
+   if (ch < 0x10000) {
+      buf[0] = 0xe0 | (((unsigned char)ch >> 12));
+      buf[1] = 0x80 | (((unsigned char)ch >> 6) & 0x3f);
+      buf[2] = 0x80 | (((unsigned char)ch) & 0x3f);
+      return 3;
+   }
+   buf[0] = 0xf0 | (((unsigned char)ch >> 18));
+   buf[1] = 0x80 | (((unsigned char)ch >> 12) & 0x3f);
+   buf[2] = 0x80 | (((unsigned char)ch >> 6) & 0x3f);
+   buf[3] = 0x80 | (((unsigned char)ch) & 0x3f);
+   return 4;
+}
+
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+//
 //                         Miscellany
 //
 
