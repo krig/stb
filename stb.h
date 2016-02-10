@@ -2845,7 +2845,7 @@ static void * malloc_base(void *context, size_t size, stb__alloc_type t, int ali
 
       case STB__chunked: {
          stb__chunked *s;
-         if (align < sizeof(stb_uintptr)) align = sizeof(stb_uintptr);
+         if (align < (int)sizeof(stb_uintptr)) align = sizeof(stb_uintptr);
          s = (stb__chunked *) stb__alloc_chunk(src, size, align, sizeof(*s));
          if (s == NULL) return NULL;
          stb__setparent(s, src);
@@ -5719,7 +5719,7 @@ void    stb_fput_varlen64(FILE *f, stb_uint64 v)
 void    stb_fput_ranged(FILE *f, int v, int b, stb_uint n)
 {
    v -= b;
-   if (n <= (1 << 31))
+   if (n <= ((stb_uint)1 << 31))
       assert((stb_uint) v < n);
    if (n > (1 << 24)) fputc(v >> 24, f);
    if (n > (1 << 16)) fputc(v >> 16, f);
@@ -8130,8 +8130,8 @@ unsigned long stb_rand()
    unsigned long s,r;
    int i;
 	
-   if (idx >= STB__MT_LEN*sizeof(unsigned long)) {
-      if (idx > STB__MT_LEN*sizeof(unsigned long))
+   if (idx >= STB__MT_LEN*(int)sizeof(unsigned long)) {
+      if (idx > STB__MT_LEN*(int)sizeof(unsigned long))
          stb_srand(0);
       idx = 0;
       i = 0;
@@ -10251,7 +10251,7 @@ static void stb__write(unsigned char v)
    ++stb__outbytes;
 }
 
-#define stb_out(v)    (stb__out ? *stb__out++ = (stb_uchar) (v) : stb__write((stb_uchar) (v)))
+#define stb_out(v)    do { if (stb__out) { *stb__out++ = (stb_uchar) (v); } else { stb__write((stb_uchar) (v)); } } while (0)
 
 static void stb_out2(stb_uint v)
 {
@@ -10782,7 +10782,7 @@ stbfile *stb_openf(FILE *f)
    stbfile m = { stb__fgetbyte, stb__fgetdata,
                  stb__fputbyte, stb__fputdata,
                  stb__fsize, stb__ftell, stb__fbackpatch, stb__fclose,
-                 0,0,0, };
+                 0,0,0,0,{0}, };
    stbfile *z = (stbfile *) malloc(sizeof(*z));
    if (z) {
       *z = m;
@@ -10826,7 +10826,8 @@ stbfile *stb_open_inbuffer(void *buffer, unsigned int len)
 {
    stbfile m = { stb__bgetbyte, stb__bgetdata,
                  stb__noputbyte, stb__noputdata,
-                 stb__bsize, stb__btell, stb__nobackpatch, stb__bclose };
+                 stb__bsize, stb__btell, stb__nobackpatch, stb__bclose,
+                 0, 0, 0, 0, {0} };
    stbfile *z = (stbfile *) malloc(sizeof(*z));
    if (z) {
       *z = m;
@@ -10908,7 +10909,8 @@ stbfile *stb_open_outbuffer(unsigned char **update_on_close)
 {
    stbfile m = { stb__nogetbyte, stb__nogetdata,
                  stb__aputbyte, stb__aputdata,
-                 stb__asize, stb__asize, stb__abackpatch, stb__aclose };
+                 stb__asize, stb__asize, stb__abackpatch, stb__aclose,
+                 0, 0, 0, 0, {0} };
    stbfile *z = (stbfile *) malloc(sizeof(*z));
    if (z) {
       z->ptr = update_on_close;
